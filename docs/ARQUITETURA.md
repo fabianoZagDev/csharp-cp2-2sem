@@ -71,12 +71,17 @@ Ordem das checagens: role (atributo, 403) → escopo (404) → ownership (403) �
 | Consultar detalhe (fora do escopo = 404) | `ExpenseAccessPolicy.CanRead` em `ExpenseService.GetByIdAsync` | `ExpenseServiceSubmitTests.GetByIdAsync_ApproverOnDraft_ThrowsNotFound` |
 | Auditor e Admin sem escrita | atributos das rotas de escrita só com `Employee` | `ExpensesControllerAuthorizationTests.WriteActions_*` |
 | Admin sem acesso funcional | Admin não está nas roles de nenhuma rota de reembolso | `ExpensesControllerAuthorizationTests.ReadActions_*` |
-| Aprovar/reprovar/pagar (não proprietário) | `ExpenseAccessPolicy.EnsureCanDecide` (usado pela Parte 3) | `ExpenseAccessPolicyTests.EnsureCanDecide_*` |
-| Aprovar, reprovar, pagar, histórico | **pendente: Parte 3 (I07/I08)** | — |
+| Aprovar/reprovar/pagar (não proprietário) | `ExpenseAccessPolicy.EnsureCanDecide` | `ExpenseAccessPolicyTests.EnsureCanDecide_*` |
+| Aprovar (Approver não dono, `Submitted → Approved`) | atributo `Approver` + `EnsureCanDecide` + `Expense.Approve` | `ExpenseDecisionTests.Approve_*`, `ExpenseServiceDecisionTests.ApproveAsync_*`, `ExpensesControllerAuthorizationTests.WriteAction_Roles_MatchAuthorizationMatrix` |
+| Reprovar com justificativa de 10 a 500 caracteres (`Submitted → Rejected`) | `RejectExpenseRequest` (DataAnnotations) + atributo `Approver` + `EnsureCanDecide` + `Expense.Reject` (Trim e limites) | `ExpenseDecisionTests.Reject_*`, `ExpenseServiceDecisionTests.RejectAsync_*` |
+| Pagar e histórico | **pendente: I08** | — |
 
 ## Testes: apoio
 
 - `Fakes/FixedTimeProvider`: horário fixo.
 - `Fakes/InMemoryExpenseRepository`: repositório em memória; `SaveChangesCalls` conta as gravações; `ListAsync` usa `filter.Compile()`.
-- `Fakes/ExpenseFactory.Create(ownerId, status)`: cria um reembolso em qualquer estado (força o estado por reflexão),
-  útil enquanto não existem os métodos `Approve`/`Reject`/`MarkAsPaid`.
+- `Fakes/ExpenseFactory.Create(ownerId, status)`: cria um reembolso em qualquer estado passando pelas transições reais
+  (`Submit`, `Approve`, `Reject`, com o aprovador `ExpenseFactory.ApproverId`). `Paid` ainda força o estado por reflexão
+  até existir `MarkAsPaid` (I08).
+- A justificativa da reprovação é validada duas vezes: `RejectExpenseRequest` (400 automático) e `Expense.Reject`, que
+  aplica Trim antes de medir (só espaços ou 9 caracteres úteis geram `DomainValidationException`).

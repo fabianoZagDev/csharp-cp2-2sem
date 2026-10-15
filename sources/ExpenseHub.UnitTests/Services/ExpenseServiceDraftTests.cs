@@ -113,7 +113,7 @@ public sealed class ExpenseServiceDraftTests
         var repository = new InMemoryExpenseRepository();
         ExpenseService service = CreateService(repository);
         Expense expense = await service.CreateAsync(_employeeA, NewCreateRequest(), CancellationToken.None);
-        typeof(Expense).GetProperty(nameof(Expense.Status))!.SetValue(expense, ExpenseStatus.Submitted);
+        expense.Submit(_employeeA.Id, _now.UtcDateTime);
 
         await Assert.ThrowsExactlyAsync<StateConflictException>(
             () => service.UpdateAsync(_employeeA, expense.Id, NewUpdateRequest(), CancellationToken.None));

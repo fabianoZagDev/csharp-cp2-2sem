@@ -238,6 +238,72 @@ public class Expense
             ExpenseStatus.Submitted));
     }
 
+    /// <summary>
+    /// Aprova um reembolso enviado, registrando o histórico da transição.
+    /// </summary>
+    /// <param name="actorId">Identificador do aprovador, vindo do token.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="StateConflictException">Quando o reembolso não está enviado.</exception>
+    public void Approve(string actorId, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        if (Status != ExpenseStatus.Submitted)
+        {
+            throw new StateConflictException("Somente reembolsos enviados podem ser aprovados.");
+        }
+
+        Status = ExpenseStatus.Approved;
+        UpdatedAtUtc = nowUtc;
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Approved,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Submitted,
+            ExpenseStatus.Approved));
+    }
+
+    /// <summary>
+    /// Reprova um reembolso enviado, gravando a justificativa e o histórico da transição.
+    /// </summary>
+    /// <param name="actorId">Identificador do aprovador, vindo do token.</param>
+    /// <param name="justification">Justificativa da reprovação.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="DomainValidationException">Quando a justificativa é vazia, curta ou longa.</exception>
+    /// <exception cref="StateConflictException">Quando o reembolso não está enviado.</exception>
+    public void Reject(string actorId, string justification, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        string cleanJustification = justification?.Trim() ?? string.Empty;
+
+        if (cleanJustification.Length is < RejectionReasonMinLength or > RejectionReasonMaxLength)
+        {
+            throw new DomainValidationException(
+                $"A justificativa deve ter entre {RejectionReasonMinLength} e {RejectionReasonMaxLength} caracteres.");
+        }
+
+        if (Status != ExpenseStatus.Submitted)
+        {
+            throw new StateConflictException("Somente reembolsos enviados podem ser reprovados.");
+        }
+
+        Status = ExpenseStatus.Rejected;
+        RejectionReason = cleanJustification;
+        UpdatedAtUtc = nowUtc;
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Rejected,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Submitted,
+            ExpenseStatus.Rejected,
+            justification: cleanJustification));
+    }
+
     private static string ValidateFields(
         string description,
         decimal amount,

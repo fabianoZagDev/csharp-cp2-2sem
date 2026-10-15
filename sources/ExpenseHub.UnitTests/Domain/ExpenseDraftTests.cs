@@ -170,11 +170,11 @@ public sealed class ExpenseDraftTests
     public void UpdateDraft_NotDraft_ThrowsStateConflict()
     {
         Expense expense = Expense.CreateDraft("user-1", "Almoço com cliente", 10m, _today, 1, _now);
-        typeof(Expense).GetProperty(nameof(Expense.Status))!.SetValue(expense, ExpenseStatus.Submitted);
+        expense.Submit("user-1", _now);
 
         Assert.ThrowsExactly<StateConflictException>(
             () => expense.UpdateDraft("user-1", "Almoço com cliente", 10m, _today, 1, _now));
-        Assert.HasCount(1, expense.History);
+        Assert.HasCount(2, expense.History);
     }
 
     /// <summary>
