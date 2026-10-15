@@ -102,6 +102,40 @@ public sealed class ExpensesController : ControllerBase
     }
 
     /// <summary>
+    /// Aprova um reembolso enviado.
+    /// </summary>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso aprovado.</returns>
+    [HttpPost("{id:guid}/approve")]
+    [Authorize(Roles = Roles.Approver)]
+    public async Task<ActionResult<ExpenseResponse>> Approve(Guid id, CancellationToken cancellationToken)
+    {
+        Expense expense = await _service.ApproveAsync(CurrentUser.FromPrincipal(User), id, cancellationToken);
+
+        return ExpenseResponse.FromEntity(expense);
+    }
+
+    /// <summary>
+    /// Reprova um reembolso enviado, com justificativa.
+    /// </summary>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="request">Justificativa da reprovação.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso reprovado.</returns>
+    [HttpPost("{id:guid}/reject")]
+    [Authorize(Roles = Roles.Approver)]
+    public async Task<ActionResult<ExpenseResponse>> Reject(
+        Guid id,
+        RejectExpenseRequest request,
+        CancellationToken cancellationToken)
+    {
+        Expense expense = await _service.RejectAsync(CurrentUser.FromPrincipal(User), id, request, cancellationToken);
+
+        return ExpenseResponse.FromEntity(expense);
+    }
+
+    /// <summary>
     /// Lista os reembolsos visíveis ao usuário.
     /// </summary>
     /// <param name="cancellationToken">Token de cancelamento.</param>

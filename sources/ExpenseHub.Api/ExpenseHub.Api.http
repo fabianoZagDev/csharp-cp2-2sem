@@ -121,4 +121,102 @@ Content-Type: application/json
 ### Negativos: sem token -> 401
 GET {{ExpenseHub_Api_HostAddress}}/api/expenses
 
-# Partes 3 (I07/I08): approve, reject, pay e history serão acrescentados aqui.
+### Cadastro de um aprovador
+# @name registerApprover
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "approver@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@approverId = {{registerApprover.response.body.$.id}}
+
+### Admin atribui a role Approver
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{approverId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Approver"]
+}
+
+### Login do aprovador
+# @name loginApprover
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "approver@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@approverToken = {{loginApprover.response.body.$.accessToken}}
+
+### Aprovador lista os reembolsos enviados
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{approverToken}}
+
+### Aprova o reembolso enviado -> 200 (Approved)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{approverToken}}
+
+### Negativos: aprovar de novo -> 409 (sem duplicar histórico)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{approverToken}}
+
+### Negativos: Employee não aprova -> 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/approve
+Authorization: Bearer {{employeeToken}}
+
+### Cria um segundo rascunho para a reprovação
+# @name createExpenseToReject
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Táxi do aeroporto até o hotel",
+  "amount": 120.00,
+  "expenseDate": "2026-10-13",
+  "categoryId": 2
+}
+
+###
+@rejectedExpenseId = {{createExpenseToReject.response.body.$.id}}
+
+### Envia o segundo rascunho
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{rejectedExpenseId}}/submit
+Authorization: Bearer {{employeeToken}}
+
+### Negativos: justificativa curta -> 400
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{rejectedExpenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "curta"
+}
+
+### Reprova com justificativa -> 200 (Rejected)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{rejectedExpenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "Falta o comprovante fiscal da corrida."
+}
+
+### Negativos: reprovar um reembolso já reprovado -> 409
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{rejectedExpenseId}}/reject
+Authorization: Bearer {{approverToken}}
+Content-Type: application/json
+
+{
+  "justification": "Falta o comprovante fiscal da corrida."
+}
+
+# I08: pay e history serão acrescentados aqui.

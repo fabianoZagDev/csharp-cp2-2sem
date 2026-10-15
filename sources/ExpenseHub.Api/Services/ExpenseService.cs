@@ -99,6 +99,39 @@ public sealed class ExpenseService : IExpenseService
     }
 
     /// <inheritdoc />
+    public async Task<Expense> ApproveAsync(CurrentUser user, Guid id, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        Expense expense = await FindOrThrowAsync(id, cancellationToken);
+        ExpenseAccessPolicy.EnsureCanDecide(user, expense);
+
+        expense.Approve(user.Id, _timeProvider.GetUtcNow().UtcDateTime);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        return expense;
+    }
+
+    /// <inheritdoc />
+    public async Task<Expense> RejectAsync(
+        CurrentUser user,
+        Guid id,
+        RejectExpenseRequest request,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(request);
+
+        Expense expense = await FindOrThrowAsync(id, cancellationToken);
+        ExpenseAccessPolicy.EnsureCanDecide(user, expense);
+
+        expense.Reject(user.Id, request.Justification, _timeProvider.GetUtcNow().UtcDateTime);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        return expense;
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Expense>> ListAsync(CurrentUser user, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);
