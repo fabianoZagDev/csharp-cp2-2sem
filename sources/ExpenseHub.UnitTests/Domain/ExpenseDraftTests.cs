@@ -190,4 +190,45 @@ public sealed class ExpenseDraftTests
         Assert.AreEqual("Almoço com cliente", expense.Description);
         Assert.HasCount(1, expense.History);
     }
+
+    /// <summary>
+    /// Categoria zero ou negativa é rejeitada na criação.
+    /// </summary>
+    /// <param name="categoryId">Categoria testada.</param>
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(-1)]
+    public void CreateDraft_NonPositiveCategory_ThrowsDomainValidation(int categoryId)
+    {
+        Assert.ThrowsExactly<DomainValidationException>(
+            () => Expense.CreateDraft("user-1", "Almoço com cliente", 10m, _today, categoryId, _now));
+    }
+
+    /// <summary>
+    /// A edição revalida a data: amanhã é rejeitado e hoje é aceito.
+    /// </summary>
+    [TestMethod]
+    public void UpdateDraft_ExpenseDate_TodayAcceptedTomorrowRejected()
+    {
+        Expense expense = Expense.CreateDraft("user-1", "Almoço com cliente", 10m, _today.AddDays(-3), 1, _now);
+
+        Assert.ThrowsExactly<DomainValidationException>(
+            () => expense.UpdateDraft("user-1", "Almoço com cliente", 10m, _today.AddDays(1), 1, _now));
+        expense.UpdateDraft("user-1", "Almoço com cliente", 10m, _today, 1, _now);
+
+        Assert.AreEqual(_today, expense.ExpenseDate);
+    }
+
+    /// <summary>
+    /// Editar sem mudar nada ainda registra o histórico, informando que não houve alteração.
+    /// </summary>
+    [TestMethod]
+    public void UpdateDraft_NoChanges_RecordsHistoryWithoutChanges()
+    {
+        Expense expense = Expense.CreateDraft("user-1", "Almoço com cliente", 10m, _today, 1, _now);
+
+        expense.UpdateDraft("user-1", "Almoço com cliente", 10m, _today, 1, _now);
+
+        Assert.AreEqual("Nenhuma alteração.", expense.History.Last().Changes);
+    }
 }
