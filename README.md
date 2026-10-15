@@ -72,3 +72,8 @@ Os testes unitários não dependem de banco, rede ou serviço externo.
 - [Processo no GitHub](docs/PROCESSO-GITHUB.md)
 - [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
 - [Regras do pipeline de qualidade](docs/code-quality-rules.md)
+
+## Integrantes
+- Lorran dos Santos Sarmento - RM 558982
+- Fabiano Zague - RM 555524
+- Pedro Certo - RM 556268
