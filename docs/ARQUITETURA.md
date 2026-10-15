@@ -90,3 +90,25 @@ Ordem das checagens: role (atributo, 403) → escopo (404) → ownership (403) �
 - `InMemoryExpenseRepository.SaveFailure` simula falha de persistência; `ListHistoryCalls` mostra se o histórico foi consultado.
 - A justificativa da reprovação é validada duas vezes: `RejectExpenseRequest` (400 automático) e `Expense.Reject`, que
   aplica Trim antes de medir (só espaços ou 9 caracteres úteis geram `DomainValidationException`).
+
+## Testes: organização e regressão
+
+| Suíte | Regra coberta |
+|---|---|
+| `Domain/ExpenseTransitionTableTests` | todos os estados × todas as ações: 5 transições válidas (estado, ator, horário, histórico) e as 20 inválidas (409 sem mudar estado, histórico nem `UpdatedAtUtc`) |
+| `Domain/ExpenseDraftTests`, `ExpenseDecisionTests`, `ExpensePaymentTests` | limites de descrição, valor, data, categoria e justificativa; Trim; histórico de cada operação; `PaymentRecord` |
+| `Services/ExpenseServiceOwnershipTests` | ordem escopo (404) → dono (403) → estado (409); leitor que não é dono; dono acumulando roles |
+| `Services/ExpenseService*Tests` | operações completas com uma única gravação, ator e horário do servidor, visibilidade de detalhe e histórico |
+| `Services/ExpenseAccessPolicyTests`, `Controllers/ExpensesControllerAuthorizationTests` | união das roles na leitura e matriz de roles por rota |
+
+Regressão verificada (I09): cada regra abaixo foi quebrada de propósito, uma por vez, e revertida em seguida.
+
+| Defeito introduzido | Testes que falharam (exemplos) |
+|---|---|
+| `EnsureCanDecide` sem checagem de dono | `EnsureCanDecide_OwnerWith*`, `ApproveAsync/RejectAsync/PayAsync_Owner*` (9 falhas) |
+| data da despesa `>` trocado por `>=` | `CreateDraft_ExpenseDateToday_Succeeds`, `UpdateDraft_ExpenseDate_TodayAcceptedTomorrowRejected` (127 falhas) |
+| justificativa mínima 9 | `Reject_JustificationTooShort_*` (2 falhas) |
+| `MarkAsPaid` aceitando qualquer estado não-Draft | `MarkAsPaid_NotApproved_*`, `PayAsync_Twice_*`, `Transition_NotAllowed_*` (12 falhas) |
+| Approver enxergando `Approved` em vez de `Submitted` | `ReadableBy_Approver_SeesOnlySubmitted`, `GetHistoryAsync_ApproverOnApproved_ThrowsNotFound` (3 falhas) |
+| justificativa sem Trim | `Reject_JustificationWithPadding_IsTrimmed`, `Reject_JustificationTooShort_*` (3 falhas) |
+| `Approve` sem registrar histórico | `Approve_Submitted_BecomesApprovedWithHistory`, `FullFlow_*`, `Transition_Allowed_*` (6 falhas) |
