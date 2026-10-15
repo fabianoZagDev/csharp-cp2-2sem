@@ -55,15 +55,39 @@ public sealed class ExpensesControllerAuthorizationTests
     }
 
     /// <summary>
-    /// Criar, editar e enviar são exclusivos da role Employee.
+    /// Cada rota de escrita aceita uma única role: Employee cria, edita e envia; Approver aprova e reprova.
+    /// </summary>
+    /// <param name="actionName">Nome da ação do controller.</param>
+    /// <param name="role">Única role aceita.</param>
+    [TestMethod]
+    [DataRow(nameof(ExpensesController.Create), Roles.Employee)]
+    [DataRow(nameof(ExpensesController.Update), Roles.Employee)]
+    [DataRow(nameof(ExpensesController.Submit), Roles.Employee)]
+    [DataRow(nameof(ExpensesController.Approve), Roles.Approver)]
+    [DataRow(nameof(ExpensesController.Reject), Roles.Approver)]
+    public void WriteAction_Roles_MatchAuthorizationMatrix(string actionName, string role)
+    {
+        MethodInfo action = ActionsWhere(IsWrite).Single(method => method.Name == actionName);
+
+        CollectionAssert.AreEqual(new[] { role }, RolesOf(action), actionName);
+    }
+
+    /// <summary>
+    /// Toda rota de escrita do controller está coberta pela matriz acima.
     /// </summary>
     [TestMethod]
-    public void WriteActions_Roles_AreEmployeeOnly()
+    public void WriteActions_All_AreCoveredByMatrix()
     {
-        foreach (MethodInfo action in ActionsWhere(IsWrite))
-        {
-            CollectionAssert.AreEqual(new[] { Roles.Employee }, RolesOf(action), action.Name);
-        }
+        string[] expected =
+        [
+            nameof(ExpensesController.Create),
+            nameof(ExpensesController.Update),
+            nameof(ExpensesController.Submit),
+            nameof(ExpensesController.Approve),
+            nameof(ExpensesController.Reject),
+        ];
+
+        CollectionAssert.AreEquivalent(expected, ActionsWhere(IsWrite).Select(action => action.Name).ToArray());
     }
 
     private static bool IsWrite(MethodInfo method)
