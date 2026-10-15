@@ -42,3 +42,41 @@ Não existe pasta `Models/`: entidades ficam em `Domain/` e nunca são recebidas
 
 As propriedades das entidades têm `private set`. Alterações acontecem somente por métodos de domínio, que validam
 estado e registram histórico.
+
+## Autenticação e usuários
+
+- Identity (`AddIdentityCore<IdentityUser>().AddRoles<IdentityRole>()`) sobre o mesmo `AppDbContext`, com bearer token
+  (`IdentityConstants.BearerScheme`). O login monta o principal com `IUserClaimsPrincipalFactory`, então o token carrega
+  `NameIdentifier`, as roles e o security stamp.
+- `Auth/SecurityStampMiddleware` compara o stamp do token com o do banco: token emitido antes de uma troca de roles recebe 401.
+  `UserService.UpdateRolesAsync` renova o stamp.
+- `Auth/IdentitySeeder` cria as 5 roles e **uma** conta Admin (e-mail em `Seed:Admin:Email`, senha em
+  `Seed:Admin:Password` via user-secrets ou variável de ambiente `Seed__Admin__Password`). Sem senha configurada, só as roles são criadas.
+- `POST /register` aceita só e-mail e senha (campos extras, como `roles`, geram 400). E-mail repetido gera 409.
+- `PUT /api/admin/users/{id}/roles` substitui o conjunto de roles; role desconhecida gera 400 e o Admin não remove a própria role Admin (403).
+
+## Matriz implementada
+
+Ordem das checagens: role (atributo, 403) → escopo (404) → ownership (403) → estado (409).
+
+| Linha da matriz | Onde a regra é aplicada | Teste que cobre |
+|---|---|---|
+| Registrar usuário (nunca aceita role) | `RegisterRequest` sem campo de role + `UnmappedMemberHandling.Disallow` | smoke HTTP (`ExpenseHub.Api.http`) |
+| Listar usuários / alterar roles (somente Admin) | `[Authorize(Roles = Roles.Admin)]` em `AdminUsersController` | `RoleChangePolicyTests` |
+| Não remover a própria role Admin | `RoleChangePolicy.Resolve` | `RoleChangePolicyTests.Resolve_AdminRemovingOwnAdminRole_ThrowsForbidden` |
+| Criar reembolso (Employee; dono vem do token) | atributo `Employee` + `Expense.CreateDraft(user.Id, ...)` | `ExpensesControllerAuthorizationTests`, `ExpenseServiceDraftTests.CreateAsync_ValidRequest_UsesAuthenticatedOwnerAndDraftStatus` |
+| Editar (dono e Draft) | atributo `Employee` + `ExpenseAccessPolicy.EnsureCanActAsOwner` + `Expense.UpdateDraft` | `ExpenseServiceDraftTests.UpdateAsync_*`, `ExpenseAccessPolicyTests.EnsureCanActAsOwner_*` |
+| Enviar (dono e Draft) | atributo `Employee` + `EnsureCanActAsOwner` + `Expense.Submit` | `ExpenseServiceSubmitTests.SubmitAsync_*` |
+| Listar (próprios / Submitted / Approved e Paid / todos) | `ExpenseAccessPolicy.ReadableBy`, aplicado na consulta (`IExpenseRepository.ListAsync`) | `ExpenseAccessPolicyTests.ReadableBy_*`, `ExpenseServiceSubmitTests.ListAsync_*` |
+| Consultar detalhe (fora do escopo = 404) | `ExpenseAccessPolicy.CanRead` em `ExpenseService.GetByIdAsync` | `ExpenseServiceSubmitTests.GetByIdAsync_ApproverOnDraft_ThrowsNotFound` |
+| Auditor e Admin sem escrita | atributos das rotas de escrita só com `Employee` | `ExpensesControllerAuthorizationTests.WriteActions_*` |
+| Admin sem acesso funcional | Admin não está nas roles de nenhuma rota de reembolso | `ExpensesControllerAuthorizationTests.ReadActions_*` |
+| Aprovar/reprovar/pagar (não proprietário) | `ExpenseAccessPolicy.EnsureCanDecide` (usado pela Parte 3) | `ExpenseAccessPolicyTests.EnsureCanDecide_*` |
+| Aprovar, reprovar, pagar, histórico | **pendente: Parte 3 (I07/I08)** | — |
+
+## Testes: apoio
+
+- `Fakes/FixedTimeProvider`: horário fixo.
+- `Fakes/InMemoryExpenseRepository`: repositório em memória; `SaveChangesCalls` conta as gravações; `ListAsync` usa `filter.Compile()`.
+- `Fakes/ExpenseFactory.Create(ownerId, status)`: cria um reembolso em qualquer estado (força o estado por reflexão),
+  útil enquanto não existem os métodos `Approve`/`Reject`/`MarkAsPaid`.
