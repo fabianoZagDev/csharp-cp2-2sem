@@ -23,6 +23,16 @@ public sealed class InMemoryExpenseRepository : IExpenseRepository
     public int SaveChangesCalls { get; private set; }
 
     /// <summary>
+    /// Obtém ou define a exceção lançada por <see cref="SaveChangesAsync"/>, simulando falha de persistência.
+    /// </summary>
+    public Exception? SaveFailure { get; set; }
+
+    /// <summary>
+    /// Obtém quantas vezes <see cref="ListHistoryAsync"/> foi chamado.
+    /// </summary>
+    public int ListHistoryCalls { get; private set; }
+
+    /// <summary>
     /// Obtém os reembolsos armazenados.
     /// </summary>
     public IReadOnlyList<Expense> Expenses => _expenses;
@@ -46,6 +56,20 @@ public sealed class InMemoryExpenseRepository : IExpenseRepository
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<ExpenseHistory>> ListHistoryAsync(Guid expenseId, CancellationToken cancellationToken)
+    {
+        ListHistoryCalls++;
+
+        IReadOnlyList<ExpenseHistory> result = _expenses
+            .Where(expense => expense.Id == expenseId)
+            .SelectMany(expense => expense.History)
+            .OrderBy(history => history.OccurredAtUtc)
+            .ToList();
+
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc />
     public Task<bool> CategoryExistsAsync(int categoryId, CancellationToken cancellationToken)
     {
         return Task.FromResult(_categoryIds.Contains(categoryId));
@@ -62,6 +86,6 @@ public sealed class InMemoryExpenseRepository : IExpenseRepository
     {
         SaveChangesCalls++;
 
-        return Task.CompletedTask;
+        return SaveFailure is null ? Task.CompletedTask : Task.FromException(SaveFailure);
     }
 }
