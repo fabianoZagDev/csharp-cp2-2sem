@@ -1,9 +1,124 @@
 @ExpenseHub_Api_HostAddress = http://localhost:5245
+@adminEmail = admin@expensehub.local
+@adminPassword = {{$processEnv EXPENSEHUB_ADMIN_PASSWORD}}
+@userPassword = {{$processEnv EXPENSEHUB_USER_PASSWORD}}
+
+# Fluxo: Admin faz login -> usuário se registra (sem role) -> Admin atribui roles
+# -> o usuário faz NOVO login (o token antigo recebe 401 depois da troca de roles).
 
 GET {{ExpenseHub_Api_HostAddress}}/health
 Accept: application/json
 
-###
+### Login do Admin (seed)
+# @name loginAdmin
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
 
-# Os endpoints do checkpoint estão definidos em docs/REQUISITOS.md.
-# Implemente e adicione aqui as requisições usadas para validar cada issue.
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.$.accessToken}}
+
+### Cadastro de um funcionário (nunca aceita roles)
+# @name registerEmployee
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "employee@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@employeeId = {{registerEmployee.response.body.$.id}}
+
+### Admin lista usuários
+GET {{ExpenseHub_Api_HostAddress}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+
+### Admin atribui a role Employee
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{employeeId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Employee"]
+}
+
+### Login do funcionário (refazer depois de qualquer troca de roles)
+# @name loginEmployee
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "employee@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@employeeToken = {{loginEmployee.response.body.$.accessToken}}
+
+### Roles presentes no token
+GET {{ExpenseHub_Api_HostAddress}}/api/me
+Authorization: Bearer {{employeeToken}}
+
+### Cria um rascunho
+# @name createExpense
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente no centro",
+  "amount": 87.50,
+  "expenseDate": "2026-10-14",
+  "categoryId": 1
+}
+
+###
+@expenseId = {{createExpense.response.body.$.id}}
+
+### Edita o rascunho
+PUT {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente no centro (corrigido)",
+  "amount": 92.00,
+  "expenseDate": "2026-10-14",
+  "categoryId": 1
+}
+
+### Consulta o detalhe
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}
+
+### Lista conforme o perfil
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+
+### Envia para aprovação
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/submit
+Authorization: Bearer {{employeeToken}}
+
+### Negativos: campo proibido (ownerId) -> 400
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente no centro",
+  "amount": 10,
+  "expenseDate": "2026-10-14",
+  "categoryId": 1,
+  "ownerId": "outro-usuario"
+}
+
+### Negativos: sem token -> 401
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses
+
+# Partes 3 (I07/I08): approve, reject, pay e history serão acrescentados aqui.

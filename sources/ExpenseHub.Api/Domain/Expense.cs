@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using ExpenseHub.Api.Errors;
 
 namespace ExpenseHub.Api.Domain;
 
@@ -116,4 +118,191 @@ public class Expense
     /// Obtém o registro de pagamento, quando existir.
     /// </summary>
     public PaymentRecord? Payment { get; private set; }
+
+    /// <summary>
+    /// Cria um reembolso em rascunho, validando os dados e registrando o histórico de criação.
+    /// </summary>
+    /// <param name="ownerId">Identificador do proprietário, vindo do token.</param>
+    /// <param name="description">Descrição da despesa.</param>
+    /// <param name="amount">Valor solicitado.</param>
+    /// <param name="expenseDate">Data da despesa.</param>
+    /// <param name="categoryId">Identificador da categoria.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <returns>O reembolso em estado <see cref="ExpenseStatus.Draft"/>.</returns>
+    /// <exception cref="DomainValidationException">Quando algum dado é inválido.</exception>
+    public static Expense CreateDraft(
+        string ownerId,
+        string description,
+        decimal amount,
+        DateOnly expenseDate,
+        int categoryId,
+        DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        string cleanDescription = ValidateFields(description, amount, expenseDate, categoryId, nowUtc);
+
+        var expense = new Expense
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            Description = cleanDescription,
+            Amount = amount,
+            ExpenseDate = expenseDate,
+            CategoryId = categoryId,
+            Status = ExpenseStatus.Draft,
+            CreatedAtUtc = nowUtc,
+            UpdatedAtUtc = nowUtc,
+        };
+
+        expense._history.Add(new ExpenseHistory(
+            expense.Id,
+            ExpenseAction.Created,
+            ownerId,
+            nowUtc,
+            null,
+            ExpenseStatus.Draft));
+
+        return expense;
+    }
+
+    /// <summary>
+    /// Atualiza um rascunho, revalidando os dados e registrando o que mudou no histórico.
+    /// </summary>
+    /// <param name="actorId">Identificador de quem edita, vindo do token.</param>
+    /// <param name="description">Nova descrição.</param>
+    /// <param name="amount">Novo valor.</param>
+    /// <param name="expenseDate">Nova data da despesa.</param>
+    /// <param name="categoryId">Nova categoria.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="StateConflictException">Quando o reembolso não está em rascunho.</exception>
+    /// <exception cref="DomainValidationException">Quando algum dado é inválido.</exception>
+    public void UpdateDraft(
+        string actorId,
+        string description,
+        decimal amount,
+        DateOnly expenseDate,
+        int categoryId,
+        DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        if (Status != ExpenseStatus.Draft)
+        {
+            throw new StateConflictException("Somente reembolsos em rascunho podem ser editados.");
+        }
+
+        string cleanDescription = ValidateFields(description, amount, expenseDate, categoryId, nowUtc);
+        string changes = DescribeChanges(cleanDescription, amount, expenseDate, categoryId);
+
+        Description = cleanDescription;
+        Amount = amount;
+        ExpenseDate = expenseDate;
+        CategoryId = categoryId;
+        UpdatedAtUtc = nowUtc;
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Updated,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Draft,
+            ExpenseStatus.Draft,
+            changes: changes));
+    }
+
+    /// <summary>
+    /// Envia o rascunho para aprovação, registrando o histórico da transição.
+    /// </summary>
+    /// <param name="actorId">Identificador de quem envia, vindo do token.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="StateConflictException">Quando o reembolso não está em rascunho.</exception>
+    public void Submit(string actorId, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        if (Status != ExpenseStatus.Draft)
+        {
+            throw new StateConflictException("Somente reembolsos em rascunho podem ser enviados.");
+        }
+
+        Status = ExpenseStatus.Submitted;
+        UpdatedAtUtc = nowUtc;
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Submitted,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Draft,
+            ExpenseStatus.Submitted));
+    }
+
+    private static string ValidateFields(
+        string description,
+        decimal amount,
+        DateOnly expenseDate,
+        int categoryId,
+        DateTime nowUtc)
+    {
+        string cleanDescription = description?.Trim() ?? string.Empty;
+
+        if (cleanDescription.Length is < DescriptionMinLength or > DescriptionMaxLength)
+        {
+            throw new DomainValidationException(
+                $"A descrição deve ter entre {DescriptionMinLength} e {DescriptionMaxLength} caracteres.");
+        }
+
+        if (amount is < MinAmount or > MaxAmount)
+        {
+            throw new DomainValidationException("O valor deve estar entre 0,01 e 2.147.483.647.");
+        }
+
+        if (expenseDate > DateOnly.FromDateTime(nowUtc))
+        {
+            throw new DomainValidationException("A data da despesa não pode ser futura.");
+        }
+
+        if (categoryId <= 0)
+        {
+            throw new DomainValidationException("A categoria é inválida.");
+        }
+
+        return cleanDescription;
+    }
+
+    private string DescribeChanges(string description, decimal amount, DateOnly expenseDate, int categoryId)
+    {
+        var changes = new List<string>();
+
+        if (!string.Equals(Description, description, StringComparison.Ordinal))
+        {
+            changes.Add($"Description: '{Description}' -> '{description}'");
+        }
+
+        if (Amount != amount)
+        {
+            changes.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Amount: {Amount} -> {amount}"));
+        }
+
+        if (ExpenseDate != expenseDate)
+        {
+            changes.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"ExpenseDate: {ExpenseDate:yyyy-MM-dd} -> {expenseDate:yyyy-MM-dd}"));
+        }
+
+        if (CategoryId != categoryId)
+        {
+            changes.Add(string.Create(
+                CultureInfo.InvariantCulture,
+                $"CategoryId: {CategoryId} -> {categoryId}"));
+        }
+
+        string text = changes.Count == 0 ? "Nenhuma alteração." : string.Join("; ", changes);
+
+        return text.Length > ExpenseHistory.ChangesMaxLength ? text[..ExpenseHistory.ChangesMaxLength] : text;
+    }
 }

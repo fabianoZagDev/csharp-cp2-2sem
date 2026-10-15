@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Data.Configurations;
 using ExpenseHub.Api.Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -11,7 +13,7 @@ namespace ExpenseHub.Api.Data;
 /// <summary>
 /// Contexto do Entity Framework Core do ExpenseHub.
 /// </summary>
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<IdentityUser>
 {
     /// <summary>
     /// Inicializa o contexto com as opções configuradas na injeção de dependência.
@@ -57,10 +59,10 @@ public class AppDbContext : DbContext
     }
 
     /// <inheritdoc />
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 
     /// <inheritdoc />
