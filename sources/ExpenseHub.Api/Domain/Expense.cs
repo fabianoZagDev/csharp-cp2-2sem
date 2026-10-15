@@ -211,6 +211,33 @@ public class Expense
             changes: changes));
     }
 
+    /// <summary>
+    /// Envia o rascunho para aprovação, registrando o histórico da transição.
+    /// </summary>
+    /// <param name="actorId">Identificador de quem envia, vindo do token.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="StateConflictException">Quando o reembolso não está em rascunho.</exception>
+    public void Submit(string actorId, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        if (Status != ExpenseStatus.Draft)
+        {
+            throw new StateConflictException("Somente reembolsos em rascunho podem ser enviados.");
+        }
+
+        Status = ExpenseStatus.Submitted;
+        UpdatedAtUtc = nowUtc;
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Submitted,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Draft,
+            ExpenseStatus.Submitted));
+    }
+
     private static string ValidateFields(
         string description,
         decimal amount,

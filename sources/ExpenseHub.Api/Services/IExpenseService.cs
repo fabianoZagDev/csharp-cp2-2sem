@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
@@ -30,6 +31,23 @@ public interface IExpenseService
     /// <param name="cancellationToken">Token de cancelamento.</param>
     /// <returns>O reembolso atualizado.</returns>
     Task<Expense> UpdateAsync(CurrentUser user, Guid id, UpdateExpenseRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Envia um rascunho do usuário autenticado para aprovação.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso enviado.</returns>
+    Task<Expense> SubmitAsync(CurrentUser user, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lista os reembolsos visíveis ao usuário, com o filtro aplicado na consulta.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Os reembolsos visíveis.</returns>
+    Task<IReadOnlyList<Expense>> ListAsync(CurrentUser user, CancellationToken cancellationToken);
 
     /// <summary>
     /// Consulta um reembolso dentro do escopo do usuário.

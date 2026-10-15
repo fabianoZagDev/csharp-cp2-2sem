@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
@@ -81,6 +82,28 @@ public sealed class ExpenseService : IExpenseService
         await _repository.SaveChangesAsync(cancellationToken);
 
         return expense;
+    }
+
+    /// <inheritdoc />
+    public async Task<Expense> SubmitAsync(CurrentUser user, Guid id, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        Expense expense = await FindOrThrowAsync(id, cancellationToken);
+        ExpenseAccessPolicy.EnsureCanActAsOwner(user, expense);
+
+        expense.Submit(user.Id, _timeProvider.GetUtcNow().UtcDateTime);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        return expense;
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Expense>> ListAsync(CurrentUser user, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return _repository.ListAsync(ExpenseAccessPolicy.ReadableBy(user), cancellationToken);
     }
 
     /// <inheritdoc />

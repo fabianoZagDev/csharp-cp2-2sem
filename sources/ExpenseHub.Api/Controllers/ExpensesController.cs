@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ExpenseHub.Api.Auth;
@@ -19,6 +21,8 @@ namespace ExpenseHub.Api.Controllers;
 [Route("api/expenses")]
 public sealed class ExpensesController : ControllerBase
 {
+    private const string ReadRoles = Roles.Employee + "," + Roles.Approver + "," + Roles.Finance + "," + Roles.Auditor;
+
     private readonly IExpenseService _service;
 
     /// <summary>
@@ -74,11 +78,40 @@ public sealed class ExpensesController : ControllerBase
     /// <param name="cancellationToken">Token de cancelamento.</param>
     /// <returns>O reembolso encontrado.</returns>
     [HttpGet("{id:guid}")]
-    [Authorize(Roles = Roles.Employee)]
+    [Authorize(Roles = ReadRoles)]
     public async Task<ActionResult<ExpenseResponse>> GetById(Guid id, CancellationToken cancellationToken)
     {
         Expense expense = await _service.GetByIdAsync(CurrentUser.FromPrincipal(User), id, cancellationToken);
 
         return ExpenseResponse.FromEntity(expense);
+    }
+
+    /// <summary>
+    /// Envia um rascunho para aprovação.
+    /// </summary>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso enviado.</returns>
+    [HttpPost("{id:guid}/submit")]
+    [Authorize(Roles = Roles.Employee)]
+    public async Task<ActionResult<ExpenseResponse>> Submit(Guid id, CancellationToken cancellationToken)
+    {
+        Expense expense = await _service.SubmitAsync(CurrentUser.FromPrincipal(User), id, cancellationToken);
+
+        return ExpenseResponse.FromEntity(expense);
+    }
+
+    /// <summary>
+    /// Lista os reembolsos visíveis ao usuário.
+    /// </summary>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>Os reembolsos visíveis.</returns>
+    [HttpGet]
+    [Authorize(Roles = ReadRoles)]
+    public async Task<ActionResult<IReadOnlyList<ExpenseResponse>>> List(CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Expense> expenses = await _service.ListAsync(CurrentUser.FromPrincipal(User), cancellationToken);
+
+        return expenses.Select(ExpenseResponse.FromEntity).ToList();
     }
 }
