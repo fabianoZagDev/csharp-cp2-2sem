@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using ExpenseHub.Api.Domain;
 
 namespace ExpenseHub.UnitTests.Fakes;
@@ -13,6 +12,11 @@ public static class ExpenseFactory
     /// Identificador do aprovador usado nas transições montadas pela fábrica.
     /// </summary>
     public const string ApproverId = "factory-approver";
+
+    /// <summary>
+    /// Identificador do usuário do financeiro usado nas transições montadas pela fábrica.
+    /// </summary>
+    public const string FinanceId = "factory-finance";
 
     private static readonly DateTime _now = new(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc);
 
@@ -49,8 +53,7 @@ public static class ExpenseFactory
                 break;
             case ExpenseStatus.Paid:
                 expense.Approve(ApproverId, _now);
-                PropertyInfo property = typeof(Expense).GetProperty(nameof(Expense.Status))!;
-                property.SetValue(expense, status);
+                expense.MarkAsPaid(FinanceId, _now);
                 break;
             default:
                 break;

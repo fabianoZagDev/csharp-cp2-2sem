@@ -219,4 +219,65 @@ Content-Type: application/json
   "justification": "Falta o comprovante fiscal da corrida."
 }
 
-# I08: pay e history serão acrescentados aqui.
+### Cadastro de um usuário do financeiro
+# @name registerFinance
+POST {{ExpenseHub_Api_HostAddress}}/register
+Content-Type: application/json
+
+{
+  "email": "finance@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@financeId = {{registerFinance.response.body.$.id}}
+
+### Admin atribui a role Finance
+PUT {{ExpenseHub_Api_HostAddress}}/api/admin/users/{{financeId}}/roles
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "roles": ["Finance"]
+}
+
+### Login do financeiro
+# @name loginFinance
+POST {{ExpenseHub_Api_HostAddress}}/login
+Content-Type: application/json
+
+{
+  "email": "finance@expensehub.local",
+  "password": "{{userPassword}}"
+}
+
+###
+@financeToken = {{loginFinance.response.body.$.accessToken}}
+
+### Negativos: pagar um reembolso reprovado -> 409
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{rejectedExpenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+### Negativos: Approver não paga -> 403
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{approverToken}}
+
+### Paga o reembolso aprovado -> 200 (Paid, com paidById e paidAtUtc)
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+### Negativos: pagar de novo -> 409
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/pay
+Authorization: Bearer {{financeToken}}
+
+### Histórico completo: Created -> Updated -> Submitted -> Approved -> Paid
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{employeeToken}}
+
+### Histórico visto pelo financeiro (reembolso pago está no escopo)
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{financeToken}}
+
+### Negativos: Approver não vê o histórico de um reembolso já pago -> 404
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}/history
+Authorization: Bearer {{approverToken}}

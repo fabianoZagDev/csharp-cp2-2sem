@@ -304,6 +304,34 @@ public class Expense
             justification: cleanJustification));
     }
 
+    /// <summary>
+    /// Registra o pagamento simulado de um reembolso aprovado, criando o <see cref="PaymentRecord"/> e o histórico.
+    /// </summary>
+    /// <param name="actorId">Identificador do usuário do financeiro, vindo do token.</param>
+    /// <param name="nowUtc">Instante atual em UTC.</param>
+    /// <exception cref="StateConflictException">Quando o reembolso não está aprovado.</exception>
+    public void MarkAsPaid(string actorId, DateTime nowUtc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorId);
+
+        if (Status != ExpenseStatus.Approved)
+        {
+            throw new StateConflictException("Somente reembolsos aprovados podem ser pagos.");
+        }
+
+        Status = ExpenseStatus.Paid;
+        UpdatedAtUtc = nowUtc;
+        Payment = new PaymentRecord(Id, actorId, nowUtc, Amount);
+
+        _history.Add(new ExpenseHistory(
+            Id,
+            ExpenseAction.Paid,
+            actorId,
+            nowUtc,
+            ExpenseStatus.Approved,
+            ExpenseStatus.Paid));
+    }
+
     private static string ValidateFields(
         string description,
         decimal amount,

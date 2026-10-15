@@ -16,6 +16,8 @@ namespace ExpenseHub.Api.Contracts;
 /// <param name="RejectionReason">Justificativa da reprovação, quando houver.</param>
 /// <param name="CreatedAtUtc">Instante de criação em UTC.</param>
 /// <param name="UpdatedAtUtc">Instante da última alteração em UTC.</param>
+/// <param name="PaidById">Identificador de quem registrou o pagamento, quando pago.</param>
+/// <param name="PaidAtUtc">Instante do pagamento em UTC, quando pago.</param>
 public sealed record ExpenseResponse(
     Guid Id,
     string OwnerId,
@@ -26,7 +28,9 @@ public sealed record ExpenseResponse(
     ExpenseStatus Status,
     string? RejectionReason,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc)
+    DateTime UpdatedAtUtc,
+    string? PaidById,
+    DateTime? PaidAtUtc)
 {
     /// <summary>
     /// Cria a resposta a partir da entidade.
@@ -47,6 +51,8 @@ public sealed record ExpenseResponse(
             expense.Status,
             expense.RejectionReason,
             expense.CreatedAtUtc,
-            expense.UpdatedAtUtc);
+            expense.UpdatedAtUtc,
+            expense.Payment?.PaidById,
+            expense.Payment?.PaidAtUtc);
     }
 }

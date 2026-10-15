@@ -136,6 +136,39 @@ public sealed class ExpensesController : ControllerBase
     }
 
     /// <summary>
+    /// Registra o pagamento simulado de um reembolso aprovado.
+    /// </summary>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso pago.</returns>
+    [HttpPost("{id:guid}/pay")]
+    [Authorize(Roles = Roles.Finance)]
+    public async Task<ActionResult<ExpenseResponse>> Pay(Guid id, CancellationToken cancellationToken)
+    {
+        Expense expense = await _service.PayAsync(CurrentUser.FromPrincipal(User), id, cancellationToken);
+
+        return ExpenseResponse.FromEntity(expense);
+    }
+
+    /// <summary>
+    /// Consulta o histórico de um reembolso.
+    /// </summary>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>As entradas do histórico em ordem cronológica.</returns>
+    [HttpGet("{id:guid}/history")]
+    [Authorize(Roles = ReadRoles)]
+    public async Task<ActionResult<IReadOnlyList<ExpenseHistoryResponse>>> History(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ExpenseHistory> history =
+            await _service.GetHistoryAsync(CurrentUser.FromPrincipal(User), id, cancellationToken);
+
+        return history.Select(ExpenseHistoryResponse.FromEntity).ToList();
+    }
+
+    /// <summary>
     /// Lista os reembolsos visíveis ao usuário.
     /// </summary>
     /// <param name="cancellationToken">Token de cancelamento.</param>

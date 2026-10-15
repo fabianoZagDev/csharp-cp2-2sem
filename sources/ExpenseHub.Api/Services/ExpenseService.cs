@@ -132,6 +132,31 @@ public sealed class ExpenseService : IExpenseService
     }
 
     /// <inheritdoc />
+    public async Task<Expense> PayAsync(CurrentUser user, Guid id, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        Expense expense = await FindOrThrowAsync(id, cancellationToken);
+        ExpenseAccessPolicy.EnsureCanDecide(user, expense);
+
+        expense.MarkAsPaid(user.Id, _timeProvider.GetUtcNow().UtcDateTime);
+        await _repository.SaveChangesAsync(cancellationToken);
+
+        return expense;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(
+        CurrentUser user,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await GetByIdAsync(user, id, cancellationToken);
+
+        return await _repository.ListHistoryAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Expense>> ListAsync(CurrentUser user, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(user);

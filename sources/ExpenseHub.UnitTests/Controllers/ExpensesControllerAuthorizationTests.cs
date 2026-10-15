@@ -55,7 +55,7 @@ public sealed class ExpensesControllerAuthorizationTests
     }
 
     /// <summary>
-    /// Cada rota de escrita aceita uma única role: Employee cria, edita e envia; Approver aprova e reprova.
+    /// Cada rota de escrita aceita uma única role: Employee cria, edita e envia; Approver aprova e reprova; Finance paga.
     /// </summary>
     /// <param name="actionName">Nome da ação do controller.</param>
     /// <param name="role">Única role aceita.</param>
@@ -65,6 +65,7 @@ public sealed class ExpensesControllerAuthorizationTests
     [DataRow(nameof(ExpensesController.Submit), Roles.Employee)]
     [DataRow(nameof(ExpensesController.Approve), Roles.Approver)]
     [DataRow(nameof(ExpensesController.Reject), Roles.Approver)]
+    [DataRow(nameof(ExpensesController.Pay), Roles.Finance)]
     public void WriteAction_Roles_MatchAuthorizationMatrix(string actionName, string role)
     {
         MethodInfo action = ActionsWhere(IsWrite).Single(method => method.Name == actionName);
@@ -85,6 +86,7 @@ public sealed class ExpensesControllerAuthorizationTests
             nameof(ExpensesController.Submit),
             nameof(ExpensesController.Approve),
             nameof(ExpensesController.Reject),
+            nameof(ExpensesController.Pay),
         ];
 
         CollectionAssert.AreEquivalent(expected, ActionsWhere(IsWrite).Select(action => action.Name).ToArray());
