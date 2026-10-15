@@ -1,93 +1,74 @@
-# Checkpoint 2 — ExpenseHub
+# ExpenseHub — Checkpoint 2 (C#)
 
-Checkpoint de C# em grupos de até 3 pessoas para construção de uma Application Programming Interface (API) corporativa de reembolsos.
+API REST corporativa de reembolsos: funcionários registram despesas, aprovadores analisam, o financeiro registra
+o pagamento e auditores consultam todo o histórico.
 
-O prazo de entrega é **13 de outubro de 2026**. O grupo deverá implementar autenticação, autorização, fluxo de aprovação e reprovação, pagamento simulado, histórico e testes unitários.
+O backlog e os critérios de aceite estão nas issues do repositório original
+[Racass/checkpoint-csharpracass-expensehub](https://github.com/Racass/checkpoint-csharpracass-expensehub).
 
-## Criar seu repositório
+## Stack
 
-1. Clique em **Use this template**.
-2. Selecione **Create a new repository**.
-3. Crie um repositório **público** em uma das contas do grupo.
-4. Adicione os demais integrantes como colaboradores.
-5. Clone o repositório.
+- .NET 10 e ASP.NET Core
+- Entity Framework Core 10 com SQLite
+- MSTest para testes unitários
 
-Não use fork. As issues permanecem neste repositório original como especificação comum da turma.
+## Pré-requisitos
 
-Os commits serão utilizados para avaliar a participação. Todos os membros do grupo
-devem possuir mais de um commit no repositório.
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-## Fluxo de trabalho
-
-Para cada issue:
-
-1. leia os critérios no repositório original;
-2. crie uma branch com o identificador, por exemplo `i06-ownership`;
-3. implemente e valide a feature;
-4. abra uma pull request no seu próprio repositório;
-5. use um título como `I06 — Ownership e matriz de acesso`;
-6. adicione na descrição uma referência completa, como `Racass/checkpoint-csharpracass-expensehub#6`;
-7. não use `Closes`, `Fixes` ou `Resolves`, pois a issue original deve permanecer aberta;
-8. conclua a auto-revisão e faça o merge.
-
-## Estrutura inicial
-
-```text
-sources/
-├── ExpenseHub.slnx
-├── ExpenseHub.Api/
-└── ExpenseHub.UnitTests/
-```
-
-A solução começa sem Identity, banco, domínio ou testes funcionais. Toda implementação avaliada deve ser criada por você.
-
-## Comandos
+## Como executar
 
 ```shell
 dotnet restore ./sources/ExpenseHub.slnx
 dotnet build ./sources/ExpenseHub.slnx
-dotnet test ./sources/ExpenseHub.slnx
 dotnet run --project ./sources/ExpenseHub.Api/ExpenseHub.Api.csproj
 ```
 
-O endpoint inicial `GET /health` existe apenas para confirmar que a aplicação inicia.
-
-## Documentação
-
-- [Enunciado](docs/ENUNCIADO.md)
-- [Requisitos e contratos](docs/REQUISITOS.md)
-- [Rubrica](docs/RUBRICA.md)
-- [Matriz de autorização](docs/MATRIZ-AUTORIZACAO.md)
-- [Processo no GitHub](docs/PROCESSO-GITHUB.md)
-- [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
-- [Regras do pipeline de qualidade](docs/code-quality-rules.md)
+A API sobe em `http://localhost:5245`. O endpoint `GET /health` confirma que a aplicação iniciou.
 
 ## Banco de dados
 
-Você pode utilizar Microsoft SQL Server LocalDB, Oracle Database, SQLite ou outro provider relacional compatível com Entity Framework Core.
+| Item | Valor |
+|---|---|
+| Provider | SQLite |
+| Pacotes | `Microsoft.EntityFrameworkCore.Sqlite` e `Microsoft.EntityFrameworkCore.Design` (10.0.12) |
+| Configuração | `ConnectionStrings:DefaultConnection` em `sources/ExpenseHub.Api/appsettings.json` |
+| Valor padrão | `Data Source=expensehub.db`, arquivo criado no diretório de execução da API |
+| Migrations | `sources/ExpenseHub.Api/Data/Migrations` |
 
-A escolha não gera pontos. Documente no README do seu repositório:
+O banco é criado ou atualizado automaticamente na inicialização da API, que aplica as migrations pendentes.
+Para aplicar manualmente:
 
-- provider e pacote utilizado;
-- configuração necessária;
-- criação ou atualização do banco;
-- como iniciar a aplicação.
+```shell
+dotnet tool restore
+dotnet ef database update --project ./sources/ExpenseHub.Api
+```
 
-Não versione senhas, tokens ou connection strings sensíveis.
+Para criar uma nova migration depois de alterar o modelo:
+
+```shell
+dotnet ef migrations add <Nome> --project ./sources/ExpenseHub.Api --output-dir Data/Migrations
+```
+
+A connection string pode ser sobrescrita pela variável de ambiente `ConnectionStrings__DefaultConnection`.
+Para recriar o banco do zero, pare a API e apague os arquivos `expensehub.db*`. Os arquivos do banco não são
+versionados.
 
 ## Testes
 
-Somente testes unitários escritos por você entram na nota. Testes de integração, end-to-end ou de interface são permitidos, mas opcionais e sem pontuação.
+```shell
+dotnet test ./sources/ExpenseHub.slnx
+```
 
-Os testes unitários devem executar sem banco, rede ou serviço externo.
+Os testes unitários não dependem de banco, rede ou serviço externo.
 
-## Entrega
+## Documentação
 
-Entregue:
-
-- URL do repositório público;
-- commit Secure Hash Algorithm (SHA) final;
-- integração contínua executada;
-- documentação atualizada.
-
-O projeto deve compilar sem erros e ser entregue sem warnings para receber a pontuação integral de Qualidade de Código.
+- [Arquitetura e convenções do grupo](docs/ARQUITETURA.md)
+- [Enunciado](docs/ENUNCIADO.md)
+- [Requisitos e contratos](docs/REQUISITOS.md)
+- [Matriz de autorização](docs/MATRIZ-AUTORIZACAO.md)
+- [Rubrica](docs/RUBRICA.md)
+- [Processo no GitHub](docs/PROCESSO-GITHUB.md)
+- [Uso de Inteligência Artificial](docs/USO-DE-IA.md)
+- [Regras do pipeline de qualidade](docs/code-quality-rules.md)
