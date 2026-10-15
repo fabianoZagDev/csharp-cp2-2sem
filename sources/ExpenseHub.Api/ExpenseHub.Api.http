@@ -6,4 +6,37 @@ Accept: application/json
 ###
 
 # Os endpoints do checkpoint estão definidos em docs/REQUISITOS.md.
-# Implemente e adicione aqui as requisições usadas para validar cada issue.
+# I04 — exige um token de usuário com a role Employee (variável @employeeToken, vinda do login).
+
+@employeeToken = {{$processEnv EXPENSEHUB_EMPLOYEE_TOKEN}}
+
+### Cria um rascunho
+# @name createExpense
+POST {{ExpenseHub_Api_HostAddress}}/api/expenses
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente no centro",
+  "amount": 87.50,
+  "expenseDate": "2026-10-14",
+  "categoryId": 1
+}
+
+### Edita o rascunho criado acima
+@expenseId = {{createExpense.response.body.$.id}}
+
+PUT {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "description": "Almoço com cliente no centro (corrigido)",
+  "amount": 92.00,
+  "expenseDate": "2026-10-14",
+  "categoryId": 1
+}
+
+### Consulta o reembolso
+GET {{ExpenseHub_Api_HostAddress}}/api/expenses/{{expenseId}}
+Authorization: Bearer {{employeeToken}}

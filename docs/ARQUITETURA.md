@@ -11,6 +11,12 @@ atualizar este arquivo quando tomar uma decisão que afete as demais.
 | `Data/Configurations/` | mapeamentos `IEntityTypeConfiguration<T>` |
 | `Data/Migrations/` | migrations geradas pelo `dotnet ef` |
 | `Domain/` | entidades e enums; as transições de estado são métodos da entidade `Expense` |
+| `Auth/` | `Roles` (constantes) e `CurrentUser` (id e roles extraídos do token) |
+| `Controllers/` | controllers finos: `CurrentUser.FromPrincipal(User)` → serviço → resposta |
+| `Contracts/` | DTOs de **resposta** (sem DataAnnotations) |
+| `Dtos/` | DTOs de **entrada**; todo arquivo daqui tem DataAnnotations |
+| `Errors/` | exceções de negócio e o handler que gera ProblemDetails |
+| `Services/` | regras de negócio, ownership e visibilidade (`ExpenseAccessPolicy`) |
 
 Não existe pasta `Models/`: entidades ficam em `Domain/` e nunca são recebidas diretamente por endpoints.
 
