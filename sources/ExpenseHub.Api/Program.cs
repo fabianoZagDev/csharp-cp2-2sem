@@ -2,11 +2,13 @@ using System;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using ExpenseHub.Api.Auth;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Errors;
 using ExpenseHub.Api.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +29,16 @@ internal static class Program
         builder.Services.AddSingleton(TimeProvider.System);
 
         builder.Services
+            .AddAuthentication(IdentityConstants.BearerScheme)
+            .AddBearerToken(IdentityConstants.BearerScheme);
+        builder.Services.AddAuthorization();
+        builder.Services
+            .AddIdentityCore<IdentityUser>()
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<AppDbContext>();
+        builder.Services.Configure<AdminSeedOptions>(builder.Configuration.GetSection(AdminSeedOptions.SectionName));
+
+        builder.Services
             .AddControllers()
             .AddJsonOptions(options =>
             {
@@ -40,10 +52,12 @@ internal static class Program
 
         builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
         builder.Services.AddScoped<IExpenseService, ExpenseService>();
+        builder.Services.AddScoped<IUserService, UserService>();
 
         WebApplication app = builder.Build();
 
         await DatabaseInitializer.InitializeAsync(app.Services, CancellationToken.None);
+        await IdentitySeeder.SeedAsync(app.Services, CancellationToken.None);
 
         app.UseExceptionHandler();
         app.UseStatusCodePages();
@@ -53,6 +67,8 @@ internal static class Program
             app.MapOpenApi();
         }
 
+        app.UseAuthentication();
+        app.UseMiddleware<SecurityStampMiddleware>();
         app.UseAuthorization();
 
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
