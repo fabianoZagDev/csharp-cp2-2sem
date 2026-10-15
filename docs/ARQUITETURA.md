@@ -81,6 +81,15 @@ Ordem das checagens: role (atributo, 403) → escopo (404) → ownership (403) �
 | Pagar (Finance não dono, `Approved → Paid`, cria `PaymentRecord`) | atributo `Finance` + `EnsureCanDecide` + `Expense.MarkAsPaid` | `ExpensePaymentTests.*`, `ExpenseServicePaymentTests.PayAsync_*` |
 | Histórico (mesma visibilidade do detalhe; fora do escopo = 404) | `ExpenseService.GetHistoryAsync` (reusa `GetByIdAsync`) + `IExpenseRepository.ListHistoryAsync` | `ExpenseServicePaymentTests.GetHistoryAsync_*`, `ExpenseServicePaymentTests.FullFlow_CreateToPaid_RecordsOrderedHistoryWithOneSavePerOperation` |
 
+## Qualidade (I10)
+
+- Meta do workflow `code-quality`: score 100, sem warnings `CS`, `CA` ou `IDE`. Antes de cada push:
+  `dotnet build`, `dotnet test` e `dotnet format ./sources/ExpenseHub.slnx --verify-no-changes --severity warn`
+  (o IDE1006 de campo `private static readonly` sem `_camelCase` só aparece no `dotnet format`).
+- Proibido mexer em `.editorconfig`, `Directory.Build.props`, workflow, scripts ou analisadores, e usar `<NoWarn>`,
+  `#pragma warning disable` ou `[SuppressMessage]`.
+- Senhas nunca em arquivo versionado: Admin por user-secrets/variável de ambiente, `.http` por `$processEnv`.
+
 ## Testes: apoio
 
 - `Fakes/FixedTimeProvider`: horário fixo.
