@@ -61,6 +61,24 @@ public interface IExpenseService
     Task<Expense> RejectAsync(CurrentUser user, Guid id, RejectExpenseRequest request, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Registra o pagamento de um reembolso aprovado de outro usuário.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>O reembolso pago.</returns>
+    Task<Expense> PayAsync(CurrentUser user, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Consulta o histórico de um reembolso dentro do escopo do usuário.
+    /// </summary>
+    /// <param name="user">Usuário autenticado.</param>
+    /// <param name="id">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>As entradas do histórico em ordem cronológica.</returns>
+    Task<IReadOnlyList<ExpenseHistory>> GetHistoryAsync(CurrentUser user, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Lista os reembolsos visíveis ao usuário, com o filtro aplicado na consulta.
     /// </summary>
     /// <param name="user">Usuário autenticado.</param>

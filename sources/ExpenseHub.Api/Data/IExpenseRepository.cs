@@ -13,7 +13,7 @@ namespace ExpenseHub.Api.Data;
 public interface IExpenseRepository
 {
     /// <summary>
-    /// Busca um reembolso rastreado pelo contexto.
+    /// Busca um reembolso rastreado pelo contexto, com o registro de pagamento.
     /// </summary>
     /// <param name="id">Identificador do reembolso.</param>
     /// <param name="cancellationToken">Token de cancelamento.</param>
@@ -27,6 +27,14 @@ public interface IExpenseRepository
     /// <param name="cancellationToken">Token de cancelamento.</param>
     /// <returns>Os reembolsos encontrados, sem rastreamento.</returns>
     Task<IReadOnlyList<Expense>> ListAsync(Expression<Func<Expense, bool>> filter, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lista o histórico de um reembolso em ordem cronológica, com o filtro aplicado na consulta ao banco.
+    /// </summary>
+    /// <param name="expenseId">Identificador do reembolso.</param>
+    /// <param name="cancellationToken">Token de cancelamento.</param>
+    /// <returns>As entradas do histórico, sem rastreamento.</returns>
+    Task<IReadOnlyList<ExpenseHistory>> ListHistoryAsync(Guid expenseId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Indica se a categoria existe.

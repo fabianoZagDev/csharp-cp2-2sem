@@ -29,7 +29,9 @@ public sealed class ExpenseRepository : IExpenseRepository
     /// <inheritdoc />
     public Task<Expense?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
-        return _dbContext.Expenses.FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
+        return _dbContext.Expenses
+            .Include(expense => expense.Payment)
+            .FirstOrDefaultAsync(expense => expense.Id == id, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -39,8 +41,20 @@ public sealed class ExpenseRepository : IExpenseRepository
     {
         return await _dbContext.Expenses
             .AsNoTracking()
+            .Include(expense => expense.Payment)
             .Where(filter)
             .OrderByDescending(expense => expense.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ExpenseHistory>> ListHistoryAsync(Guid expenseId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.ExpenseHistories
+            .AsNoTracking()
+            .Where(history => history.ExpenseId == expenseId)
+            .OrderBy(history => history.OccurredAtUtc)
+            .ThenBy(history => history.Id)
             .ToListAsync(cancellationToken);
     }
 

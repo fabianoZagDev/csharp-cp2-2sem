@@ -29,7 +29,11 @@ Não existe pasta `Models/`: entidades ficam em `Domain/` e nunca são recebidas
 - `Expense.Version` é token de concorrência. O `AppDbContext` renova o valor a cada gravação de um `Expense`, então
   duas alterações simultâneas do mesmo reembolso geram `DbUpdateConcurrencyException` na segunda.
 - Cada operação de negócio deve terminar com **um único** `SaveChangesAsync`, que grava a mudança de estado e o
-  histórico na mesma transação.
+  histórico na mesma transação. No pagamento, o `PaymentRecord` entra pela navegação `Expense.Payment` e é gravado no
+  mesmo `SaveChangesAsync` da transição.
+- `FindAsync` e `ListAsync` fazem `Include(Payment)`, para o `ExpenseResponse` trazer `PaidById` e `PaidAtUtc`. O histórico
+  não é carregado com o reembolso: `ListHistoryAsync` consulta `ExpenseHistories` com `Where` no banco, ordenado por
+  `OccurredAtUtc` (e `Id` no empate).
 
 ## Entidades
 
@@ -74,14 +78,15 @@ Ordem das checagens: role (atributo, 403) → escopo (404) → ownership (403) �
 | Aprovar/reprovar/pagar (não proprietário) | `ExpenseAccessPolicy.EnsureCanDecide` | `ExpenseAccessPolicyTests.EnsureCanDecide_*` |
 | Aprovar (Approver não dono, `Submitted → Approved`) | atributo `Approver` + `EnsureCanDecide` + `Expense.Approve` | `ExpenseDecisionTests.Approve_*`, `ExpenseServiceDecisionTests.ApproveAsync_*`, `ExpensesControllerAuthorizationTests.WriteAction_Roles_MatchAuthorizationMatrix` |
 | Reprovar com justificativa de 10 a 500 caracteres (`Submitted → Rejected`) | `RejectExpenseRequest` (DataAnnotations) + atributo `Approver` + `EnsureCanDecide` + `Expense.Reject` (Trim e limites) | `ExpenseDecisionTests.Reject_*`, `ExpenseServiceDecisionTests.RejectAsync_*` |
-| Pagar e histórico | **pendente: I08** | — |
+| Pagar (Finance não dono, `Approved → Paid`, cria `PaymentRecord`) | atributo `Finance` + `EnsureCanDecide` + `Expense.MarkAsPaid` | `ExpensePaymentTests.*`, `ExpenseServicePaymentTests.PayAsync_*` |
+| Histórico (mesma visibilidade do detalhe; fora do escopo = 404) | `ExpenseService.GetHistoryAsync` (reusa `GetByIdAsync`) + `IExpenseRepository.ListHistoryAsync` | `ExpenseServicePaymentTests.GetHistoryAsync_*`, `ExpenseServicePaymentTests.FullFlow_CreateToPaid_RecordsOrderedHistoryWithOneSavePerOperation` |
 
 ## Testes: apoio
 
 - `Fakes/FixedTimeProvider`: horário fixo.
 - `Fakes/InMemoryExpenseRepository`: repositório em memória; `SaveChangesCalls` conta as gravações; `ListAsync` usa `filter.Compile()`.
 - `Fakes/ExpenseFactory.Create(ownerId, status)`: cria um reembolso em qualquer estado passando pelas transições reais
-  (`Submit`, `Approve`, `Reject`, com o aprovador `ExpenseFactory.ApproverId`). `Paid` ainda força o estado por reflexão
-  até existir `MarkAsPaid` (I08).
+  (`Submit`, `Approve`, `Reject`, `MarkAsPaid`, com `ExpenseFactory.ApproverId` e `ExpenseFactory.FinanceId`). Nenhum teste força estado por reflexão.
+- `InMemoryExpenseRepository.SaveFailure` simula falha de persistência; `ListHistoryCalls` mostra se o histórico foi consultado.
 - A justificativa da reprovação é validada duas vezes: `RejectExpenseRequest` (400 automático) e `Expense.Reject`, que
   aplica Trim antes de medir (só espaços ou 9 caracteres úteis geram `DomainValidationException`).
