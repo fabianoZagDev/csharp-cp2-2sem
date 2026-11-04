@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ExpenseHub.Api;
 using ExpenseHub.Api.Data;
 using ExpenseHub.Api.Messaging;
 using ExpenseHub.Api.Reports;
@@ -31,9 +32,8 @@ internal static class Program
         IHost host = builder.Build();
 
         string version = builder.Configuration["EXPENSEHUB_GIT_SHA"] ?? "local";
-        host.Services.GetRequiredService<ILoggerFactory>()
-            .CreateLogger("ExpenseHub.Worker")
-            .LogInformation("ExpenseHub worker iniciado na versão {Version}.", version);
+        ILogger startupLogger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ExpenseHub.Worker");
+        StartupLog.Started(startupLogger, "worker", version);
 
         // A web também migra; o EF Core usa trava de migração, então as duas inicializações são seguras.
         await DatabaseInitializer.InitializeAsync(host.Services, CancellationToken.None);
