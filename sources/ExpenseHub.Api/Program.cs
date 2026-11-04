@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ExpenseHub.Api;
 
@@ -89,7 +90,10 @@ internal static class Program
         app.UseMiddleware<SecurityStampMiddleware>();
         app.UseAuthorization();
 
-        app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
+        string version = builder.Configuration["EXPENSEHUB_GIT_SHA"] ?? "local";
+        app.Logger.LogInformation("ExpenseHub web iniciado na versão {Version}.", version);
+
+        app.MapGet("/health", () => Results.Ok(new { status = "ok", version }))
             .WithName("GetHealth");
         app.MapControllers();
 

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace ExpenseHub.Worker;
 
@@ -28,6 +29,11 @@ internal static class Program
         builder.Services.AddHostedService<ReportConsumerService>();
 
         IHost host = builder.Build();
+
+        string version = builder.Configuration["EXPENSEHUB_GIT_SHA"] ?? "local";
+        host.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("ExpenseHub.Worker")
+            .LogInformation("ExpenseHub worker iniciado na versão {Version}.", version);
 
         // A web também migra; o EF Core usa trava de migração, então as duas inicializações são seguras.
         await DatabaseInitializer.InitializeAsync(host.Services, CancellationToken.None);
