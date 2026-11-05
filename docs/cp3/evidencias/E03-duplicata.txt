@@ -1,0 +1,17 @@
+# E03 — Duplicata após reiniciar o worker
+Antes: status=Completed completedAt=2026-11-05T00:15:15.4819787Z generatedAt=2026-11-05T00:15:15.4318189Z total=175
+   Container expensehub-cp3-worker-1 Restarting 
+   Container expensehub-cp3-worker-1 Started 
+Republicação pelo painel (POST http://localhost:15672/api/exchanges/%2F/amq.default/publish): payload {"reportId":"9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f"}
+  routed=True
+  fila expensehub.reports: durable=True ready=0 unacked=0 consumers=1
+Depois: status=Completed completedAt=2026-11-05T00:15:15.4819787Z generatedAt=2026-11-05T00:15:15.4318189Z total=175
+Resultado idêntico: True
+Solicitações de employee-a na listagem: 2 (nenhuma nova criada pela reentrega)
+  worker-1  |       Mensagem do relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f recebida (redelivered=False).
+  worker-1  |       Relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f iniciado (tentativa 1, escopo Mine).
+  worker-1  |       Relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f concluído com 3 reembolsos.
+  worker-1  |       Mensagem do relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f confirmada (ack) com desfecho Completed.
+  worker-1  |       Mensagem do relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f recebida (redelivered=False).
+  worker-1  |       Relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f já está Completed; duplicata ignorada sem novo efeito.
+  worker-1  |       Mensagem do relatório 9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f confirmada (ack) com desfecho Duplicate.

@@ -1,0 +1,19 @@
+# E01 (complemento) — planilha aberta no Microsoft Excel
+2026-11-05T00:18:25.1660291Z
+> GET /api/reports/9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f/excel (Bearer <token omitido>)
+< 200  Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet  Content-Disposition: attachment; filename=report-9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f.xlsx; filename*=UTF-8''report-9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f.xlsx
+Aplicativo: Microsoft Excel 16.0
+Aba: Relatorio; intervalo usado: A1:C13
+  A1=Id [String] | B1=9bac42f5-b3e3-40b6-a03c-ac1c2fe9919f [String]
+  A2=Escopo [String] | B2=Mine [String]
+  A3=De [String] | B3=2026-09-01 [String]
+  A4=Até [String] | B4=2026-09-30 [String]
+  A5=Gerado em (UTC) [String] | B5=2026-11-05T00:15:15Z [String]
+  A7=Estado [String] | B7=Quantidade [String] | C7=Valor [String]
+  A8=Draft [String] | B8=0 [Double] | C8=0 [Double]
+  A9=Submitted [String] | B9=0 [Double] | C9=0 [Double]
+  A10=Approved [String] | B10=2 [Double] | C10=150 [Double]
+  A11=Rejected [String] | B11=0 [Double] | C11=0 [Double]
+  A12=Paid [String] | B12=1 [Double] | C12=25 [Double]
+  A13=Total [String] | B13=3 [Double] | C13=175 [Double]
+Soma calculada pelo Excel (SUM C8:C12) = 175
