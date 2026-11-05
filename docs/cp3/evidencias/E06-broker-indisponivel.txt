@@ -1,0 +1,24 @@
+# E06 (complementar) — Broker indisponível: publicação sem confirmação
+2026-11-05T00:17:07.6796391Z
+   Container expensehub-cp3-rabbitmq-1 Stopping 
+   Container expensehub-cp3-rabbitmq-1 Stopped 
+> POST /api/reports (Bearer <token omitido>) body: {"fromDate":"2026-09-01","scope":"Mine","toDate":"2026-09-30"}
+< 503
+  {"id":"2ef6e840-85a5-4ad1-974e-c5665ac96f3f","scope":"Mine","fromDate":"2026-09-01","toDate":"2026-09-30","status":"Pending","createdAt":"2026-11-05T00:17:13.9859681Z","startedAt":null,"completedAt":null,"result":null,"error":{"code":"PublishNotConfirmed","message":"A solicitação foi registrada, mas a fila não confirmou o recebimento. Faça um novo pedido mais tarde."}}
+> GET /api/reports/2ef6e840-85a5-4ad1-974e-c5665ac96f3f (Bearer <token omitido>)
+< 200
+  {"id":"2ef6e840-85a5-4ad1-974e-c5665ac96f3f","scope":"Mine","fromDate":"2026-09-01","toDate":"2026-09-30","status":"Pending","createdAt":"2026-11-05T00:17:13.9859681Z","startedAt":null,"completedAt":null,"result":null,"error":null}
+  web-1  |       Relatório 2ef6e840-85a5-4ad1-974e-c5665ac96f3f registrado como Pending (escopo Mine).
+  web-1  |       Relatório 2ef6e840-85a5-4ad1-974e-c5665ac96f3f persistido, mas a publicação não foi confirmada.
+  web-1  |       ExpenseHub.Api.Reports.ReportPublishException: Publicação de 2ef6e840-85a5-4ad1-974e-c5665ac96f3f não confirmada: BrokerUnreachableException.
+   Container expensehub-cp3-rabbitmq-1 Starting 
+   Container expensehub-cp3-rabbitmq-1 Started 
+  rabbitmq: healthy
+Broker de volta: novo POST -> 202, id ee89dc31-43da-437e-b82a-edbcfa647c4a (novo id; o pedido anterior não é republicado)
+  status do novo pedido: Completed
+  status do pedido sem confirmação (2ef6e840-85a5-4ad1-974e-c5665ac96f3f): Pending (sem mensagem na fila, o worker não tem o que consumir)
+  worker-1  |       Worker consumindo a fila expensehub.reports (prefetch 1, ack manual).
+  worker-1  |       Mensagem do relatório ee89dc31-43da-437e-b82a-edbcfa647c4a recebida (redelivered=False).
+  worker-1  |       Relatório ee89dc31-43da-437e-b82a-edbcfa647c4a iniciado (tentativa 1, escopo Mine).
+  worker-1  |       Relatório ee89dc31-43da-437e-b82a-edbcfa647c4a concluído com 3 reembolsos.
+  worker-1  |       Mensagem do relatório ee89dc31-43da-437e-b82a-edbcfa647c4a confirmada (ack) com desfecho Completed.
